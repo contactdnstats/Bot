@@ -1,0 +1,6 @@
+[DEFAULT]
+client_id=API_CLIENT_ID
+client_secret=API_CLIENT_SECRET
+password=BOTPASSWORD
+username=BOTUSERNAME
+user_agent='DNStats bot by /u/select1on' # Something that identifies the bot.
