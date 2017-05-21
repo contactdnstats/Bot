@@ -13,7 +13,6 @@ import requests
 locale.setlocale(locale.LC_ALL, 'en_GB.utf8') # Linux (Raspberry Pi 2)
 
 
-
 # === Logging === #
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,7 @@ def generate_response_message(marketname):
     else:
         # If the data id is null (None on python) the market doesn't exist
         middle_message = "doesn't exist."
-    response_message = f'[{marketname}](https://dnstats.net/market/{marketname}) {middle_message}'
+    response_message = f"[{marketname}](https://dnstats.net/market/{marketname.replace(' ', '+')}) {middle_message}"
 
     logger.debug(f'Response message generated: {response_message}')
     return response_message
@@ -83,8 +82,6 @@ def generate_response_message(marketname):
 # and the ? symbol. Ejem: is agora downxadw? matches. is agora downasdasdad? dont.
 pattern = re.compile(r'is (.+) (down|up|offline).{0,5}\?', re.IGNORECASE)
 
-#pattern = re.compile(r'is (.+) down.{0,5}\?', re.IGNORECASE)
-
 
 def search_for_pattern(body_text):
     """Uses the pre-compiled regex pattern to search on the message body. Returns just the matched group"""
@@ -94,6 +91,16 @@ def search_for_pattern(body_text):
         return result.group(1)
     else:
         return None
+
+
+def submission_has_been_replied_by_bot(submission, me):
+    """Checks if a submission has been replied by the bot"""
+    for comment in submission.comments:
+        if comment.author == me:
+            return True
+
+    return False
+
 
 
 def has_been_replied_by_bot(comment, me):

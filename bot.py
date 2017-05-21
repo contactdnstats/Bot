@@ -14,12 +14,17 @@ import time
 from datetime import datetime
 import argparse
 
-from helpers import has_been_replied_by_bot, search_for_pattern, generate_response_message, log_comment, wait_with_comments
+from helpers import (has_been_replied_by_bot,
+                     search_for_pattern,
+                     generate_response_message,
+                     log_comment,
+                     wait_with_comments,
+                     submission_has_been_replied_by_bot)
 
 # === Constants === #
 REPLY_WAIT_TIME = 5
 FAIL_WAIT_TIME = 30
-
+NO_COMMENTS_OF_SUBMISSIONS_WAIT_TIME = 200
 
 # === LOGGING === #
 logger = logging.getLogger(__name__)
@@ -32,8 +37,48 @@ def start_stream(args):
     reddit = praw.Reddit('dnstatsbot')  # client credentials set up in local praw.ini file. Check praw.ini.example for more info.
     bot = reddit.user.me()  # Bot object. It refers to the user who has it's credentials set in praw.ini
     subreddit = reddit.subreddit('Dnstatsbot')  # Initializing the subreddit object with the subreddit name.
+
+    # Set to store the submissions ID to avoid processing them again.
+    seen_submissions_id = set()
+
     # Start live stream on comment stream for the subreddit
-    for comment in subreddit.stream.comments():
+    for comment, submission in zip(subreddit.stream.comments(pause_after=2), subreddit.stream.submissions(pause_after=0)):
+
+        # Sleepeing if there isn't comments of submission
+        if not (comment and submission):
+            logger.info(f'There is no new comments or submissions available. Sleeping: {NO_COMMENTS_OF_SUBMISSIONS_WAIT_TIME}s')
+            time.sleep(NO_COMMENTS_OF_SUBMISSIONS_WAIT_TIME)
+
+        # Submission processing
+        # Checking if a submission was yield
+        if submission and submission.id not in seen_submissions_id:
+            seen_submissions_id.add(submission.id)
+            if not submission_has_been_replied_by_bot(submission, bot):
+                search_result_title, search_result_text = (search_for_pattern(submission.title),
+                                                           search_for_pattern(submission.selftext))
+
+                if search_result_title:
+                    search_result_submission = search_result_title
+
+                else:
+                    search_result_submission = search_result_text
+
+                if search_result_submission:
+                    logger.debug(f'Generating response for {submission.id}')
+                    response = generate_response_message(search_result_submission)
+
+                    # Reply to comment with response
+                    if not args.dry:
+                        submission.reply(response)
+                        logger.info(f'Responding to {submission.id} with response: {response}')
+                    else:
+                        logger.info(f'Responding (DRY) to {submission.id} with response: {response}')
+
+        # Comment Processing.
+        # Checking if a comment was yield
+        if not comment:
+            continue
+
         # Check if comment already has a reply
         if not has_been_replied_by_bot(comment, bot):
             logger.debug(f'Processing comment {comment.id} with body {comment.body}')
@@ -67,7 +112,6 @@ def start_stream(args):
 
         else:
             logger.debug(f'comment {comment.id} has been replied already. Skipping')  # Skip since replied to already
-
 
 def main(args):
     running = True
