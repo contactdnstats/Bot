@@ -31,7 +31,7 @@ def start_stream(args):
     """
     reddit = praw.Reddit('dnstatsbot')  # client credentials set up in local praw.ini file. Check praw.ini.example for more info.
     bot = reddit.user.me()  # Bot object. It refers to the user who has it's credentials set in praw.ini
-    subreddit = reddit.subreddit('Dnstatsbot')  # Initializing the subreddit object with the subreddit name.
+    subreddit = reddit.subreddit('DnstatsBot')  # Initializing the subreddit object with the subreddit name.
     # Start live stream on comment stream for the subreddit
     for comment in subreddit.stream.comments():
         # Check if comment already has a reply
